@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Expence - Premium Tracker</title>
+    
+    <!-- PWA Setup -->
+    <meta name="theme-color" content="#121212">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons (Material Symbols) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
+    
+    <!-- External Libs -->
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" defer></script>
+    <!-- SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <!-- D3 & Cal-Heatmap -->
+    <script src="https://d3js.org/d3.v7.min.js" defer></script>
+    <script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js" defer></script>
+    <link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css">
+    
+    <!-- Global Styles -->
+    <link rel="stylesheet" href="src/styles/global.css">
+</head>
+<body>
+    <!-- App Container -->
+    <div id="app" class="app-container">
+        
+        <!-- Top Bar (Dynamic) -->
+        <header id="app-header" class="glass-header">
+            <!-- Injected by JS -->
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="content-area">
+            <!-- Pages will be injected here via router -->
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav id="bottom-nav" class="bottom-nav glass-nav">
+            <a href="#home" class="nav-item active" data-route="home">
+                <span class="material-symbols-rounded">home</span>
+                <span class="nav-label">Home</span>
+            </a>
+            <a href="#analytics" class="nav-item" data-route="analytics">
+                <span class="material-symbols-rounded">insights</span>
+                <span class="nav-label">Analytics</span>
+            </a>
+            <div class="nav-fab-container">
+                <button id="fab-add" class="fab glass-fab" aria-label="Add Expense">
+                    <span class="material-symbols-rounded">add</span>
+                </button>
+            </div>
+            <a href="#budget" class="nav-item" data-route="budget">
+                <span class="material-symbols-rounded">donut_small</span>
+                <span class="nav-label">Budget</span>
+            </a>
+            <a href="#profile" class="nav-item" data-route="profile">
+                <span class="material-symbols-rounded">person</span>
+                <span class="nav-label">Profile</span>
+            </a>
+        </nav>
+
+        <!-- Modals & Bottom Sheets -->
+        <div id="bottom-sheet-container" class="bottom-sheet-overlay hidden">
+            <div class="bottom-sheet glass-sheet">
+                <!-- Injected dynamically -->
+            </div>
+        </div>
+        
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+        
+        <!-- Auth Overlay (Full Screen) -->
+        <div id="auth-container" class="auth-overlay hidden">
+            <!-- Auth UI -->
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="src/app.js"></script>
+</body>
+</html>
