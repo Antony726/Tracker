@@ -1,5 +1,5 @@
 import { db } from '../firebase/firebase-config.js';
-import { collection, addDoc, getDocs, query, orderBy, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, where, serverTimestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 // Save a new transaction
 export async function addTransaction(userId, transactionData) {
@@ -55,6 +55,17 @@ export async function getTransactionsByDate(userId, startDate, endDate) {
         return transactions;
     } catch (error) {
         console.error("Error getting transactions by date: ", error);
+        throw error;
+    }
+}
+
+// Delete a transaction
+export async function deleteTransaction(userId, transactionId) {
+    try {
+        const txRef = doc(db, 'users', userId, 'transactions', transactionId);
+        await deleteDoc(txRef);
+    } catch (error) {
+        console.error("Error deleting transaction: ", error);
         throw error;
     }
 }
