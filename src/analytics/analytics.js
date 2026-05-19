@@ -1,5 +1,6 @@
 import { getTransactionsByDate } from '../transactions/transaction-service.js';
 import { getCurrentUser } from '../auth/auth-service.js';
+import { formatCurrency } from '../utils/dom.js';
 
 export async function loadAnalyticsData(container) {
     const user = getCurrentUser();
