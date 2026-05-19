@@ -4,6 +4,7 @@ import { getUserCategories } from '../categories/category-service.js';
 import { getCurrentUser } from '../auth/auth-service.js';
 import { showToast } from '../components/toast.js';
 import { loadDashboardData } from '../dashboard/dashboard.js';
+import { updateHeaderStats } from '../utils/header.js';
 
 let categoriesList = [];
 
@@ -103,20 +104,20 @@ export async function openAddExpenseSheet() {
                 </div>
             </div>
             
-            <!-- Date & Shop flex block -->
-            <div style="display: flex; gap: var(--spacing-sm);">
-                <div class="form-group" style="margin:0; flex:1;">
-                    <label>Date</label>
-                    <input type="date" id="tx-date" required class="glass-input" style="font-size: 0.95rem;">
-                </div>
-                <div class="form-group" style="margin:0; flex:1; position: relative;">
-                    <label>Shop/Location Name</label>
-                    <input type="text" id="tx-shop" placeholder="E.g., Dominos, Amazon" autocomplete="off" class="glass-input" style="font-size: 0.95rem;">
-                    
-                    <!-- Frequently Stored Shop suggestions dropdown -->
-                    <div id="shop-suggestions-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: rgba(25, 25, 30, 0.95); backdrop-filter: var(--glass-blur); border: 1px solid var(--border-light); border-radius: 8px; margin-top: 4px; z-index: 100; max-height: 150px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-                        <!-- suggestions injected dynamically -->
-                    </div>
+            <!-- Date input - full width to avoid cramped mobile UI -->
+            <div class="form-group" style="margin:0;">
+                <label>Date</label>
+                <input type="date" id="tx-date" required class="glass-input" style="font-size: 0.95rem;">
+            </div>
+            
+            <!-- Shop Name input - full width to avoid cramped mobile UI -->
+            <div class="form-group" style="margin:0; position: relative;">
+                <label>Shop/Location Name</label>
+                <input type="text" id="tx-shop" placeholder="E.g., Dominos, Amazon" autocomplete="off" class="glass-input" style="font-size: 0.95rem;">
+                
+                <!-- Frequently Stored Shop suggestions dropdown -->
+                <div id="shop-suggestions-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: rgba(25, 25, 30, 0.95); backdrop-filter: var(--glass-blur); border: 1px solid var(--border-light); border-radius: 8px; margin-top: 4px; z-index: 100; max-height: 150px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                    <!-- suggestions injected dynamically -->
                 </div>
             </div>
 
@@ -206,7 +207,7 @@ function setupFormListeners(frequentShops = []) {
         opt.addEventListener('mouseleave', () => opt.style.background = 'transparent');
     });
 
-    // Frequently Typed/Stored Shop suggestions Logic
+    // Frequently Stored Shop suggestions Logic
     const shopInput = document.getElementById('tx-shop');
     const shopDropdown = document.getElementById('shop-suggestions-dropdown');
 
@@ -363,6 +364,9 @@ function setupFormListeners(frequentShops = []) {
             await addTransaction(user.uid, txData);
             showToast("Transaction saved", "success");
             closeBottomSheet();
+            
+            // Refresh persistent header quick stats
+            updateHeaderStats();
             
             // Refresh dashboard if we are on home
             if (window.location.hash === '' || window.location.hash === '#home') {
