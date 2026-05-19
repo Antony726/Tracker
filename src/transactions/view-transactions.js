@@ -4,6 +4,7 @@ import { getCurrentUser } from '../auth/auth-service.js';
 import { formatCurrency, formatDate } from '../utils/dom.js';
 import { showToast } from '../components/toast.js';
 import { loadDashboardData } from '../dashboard/dashboard.js';
+import { updateHeaderStats } from '../utils/header.js';
 
 export async function openViewTransactionsSheet() {
     const user = getCurrentUser();
@@ -198,6 +199,9 @@ async function setupViewTransactionsListeners(userId) {
         try {
             await deleteTransaction(userId, txId);
             showToast("Transaction deleted successfully", "success");
+            
+            // Update global header stats
+            updateHeaderStats();
             
             // Reload list internally
             await loadTransactions();
