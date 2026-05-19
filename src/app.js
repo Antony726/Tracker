@@ -1,12 +1,16 @@
 import { initRouter } from './utils/router.js';
 import { initAuth } from './auth/auth-service.js';
 import { openAddExpenseSheet } from './transactions/add-expense.js';
+import { initHeader } from './utils/header.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Expence App Initialized");
     
     // Initialize Auth (will handle UI toggle)
     initAuth();
+
+    // Initialize Global Header
+    initHeader();
 
     // Initialize Navigation Router
     initRouter();
