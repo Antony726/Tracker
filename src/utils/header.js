@@ -11,7 +11,7 @@ export function initHeader() {
         localStorage.setItem('header-stat-pref', 'today-expense');
     }
 
-    // Render basic structure
+    // Render basic structure with permanent settings trigger icon
     header.innerHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
             <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--primary), #8F84EA); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px var(--primary-glow);">
@@ -20,12 +20,18 @@ export function initHeader() {
             <h2 class="text-gradient" style="margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.5px;">Expence</h2>
         </div>
         
-        <!-- Pinned Stats Pill -->
-        <div id="header-stat-pill" class="glass-pill" style="display: none; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-light); cursor: pointer; user-select: none; transition: all 0.2s;">
-            <span class="indicator-dot" style="width: 6px; height: 6px; border-radius: 50%;"></span>
-            <span class="stat-label" style="color: var(--text-muted); font-weight: 500;"></span>
-            <span class="stat-value" style="font-weight: 600;"></span>
-            <span class="material-symbols-rounded" style="font-size: 14px; color: var(--text-muted);">expand_more</span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <!-- Pinned Stats Pill -->
+            <div id="header-stat-pill" class="glass-pill" style="display: none; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-light); cursor: pointer; user-select: none; transition: all 0.2s;">
+                <span class="indicator-dot" style="width: 6px; height: 6px; border-radius: 50%;"></span>
+                <span class="stat-label" style="color: var(--text-muted); font-weight: 500;"></span>
+                <span class="stat-value" style="font-weight: 600;"></span>
+            </div>
+
+            <!-- Quick Settings Button (Always Visible to prevent deadlocks) -->
+            <div id="header-menu-btn" class="glass-pill" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--border-light); cursor: pointer; transition: all 0.2s; user-select: none;">
+                <span class="material-symbols-rounded" style="font-size: 16px; color: var(--text-muted);">settings</span>
+            </div>
         </div>
 
         <!-- Choice Dropdown Menu -->
@@ -41,20 +47,25 @@ export function initHeader() {
 
     // Dropdown toggle listener
     const pill = document.getElementById('header-stat-pill');
+    const menuBtn = document.getElementById('header-menu-btn');
     const dropdown = document.getElementById('header-stat-dropdown');
 
-    if (pill && dropdown) {
-        pill.addEventListener('click', (e) => {
+    if (dropdown) {
+        const toggleDropdown = (e) => {
             e.stopPropagation();
             const isVisible = dropdown.style.display === 'flex';
             dropdown.style.display = isVisible ? 'none' : 'flex';
-        });
+        };
+
+        if (pill) pill.addEventListener('click', toggleDropdown);
+        if (menuBtn) menuBtn.addEventListener('click', toggleDropdown);
 
         // Outside click to close
         document.addEventListener('click', (e) => {
-            if (!pill.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.style.display = 'none';
+            if ((pill && pill.contains(e.target)) || (menuBtn && menuBtn.contains(e.target)) || dropdown.contains(e.target)) {
+                return;
             }
+            dropdown.style.display = 'none';
         });
 
         // Dropdown options listeners
