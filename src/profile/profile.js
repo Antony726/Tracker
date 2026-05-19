@@ -3,6 +3,7 @@ import { exportToPDF, exportToExcel } from '../utils/export-service.js';
 import { openCategoryManager } from '../categories/category-ui.js';
 import { openSubscriptionManager } from '../subscriptions/subscription-ui.js';
 import { evaluateAchievements } from '../gamification/gamification-service.js';
+import { updateHeaderStats } from '../utils/header.js';
 
 export async function loadProfileUI(container) {
     const user = getCurrentUser();
@@ -60,6 +61,19 @@ export async function loadProfileUI(container) {
                 <span>Categories</span>
                 <button id="btn-manage-cat" class="btn" style="width:auto; padding: 4px 12px; font-size: 0.8rem; background: rgba(255,255,255,0.1); color: white;">Edit</button>
             </div>
+            
+            <!-- Dynamic Header Stats Preference Selector -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light);">
+                <span>Header Quick Stat</span>
+                <select id="profile-header-stat-select" class="glass-input" style="width: auto; padding: 4px 8px; font-size: 0.8rem; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border-light); border-radius: 6px;">
+                    <option value="today-expense" style="background: var(--bg-card); color: white;">Today's Expense</option>
+                    <option value="today-income" style="background: var(--bg-card); color: white;">Today's Income</option>
+                    <option value="month-expense" style="background: var(--bg-card); color: white;">Month's Expense</option>
+                    <option value="balance" style="background: var(--bg-card); color: white;">Remaining Balance</option>
+                    <option value="none" style="background: var(--bg-card); color: white;">App Title Only</option>
+                </select>
+            </div>
+
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light);">
                 <span>Dark Mode</span>
                 <div style="width: 40px; height: 24px; background: var(--primary); border-radius: 12px; position: relative;">
@@ -93,6 +107,17 @@ export async function loadProfileUI(container) {
     document.getElementById('btn-manage-cat').addEventListener('click', () => {
         openCategoryManager();
     });
+
+    // Handle Header Quick Stat selection changes directly from profile settings
+    const headerStatSelect = document.getElementById('profile-header-stat-select');
+    if (headerStatSelect) {
+        headerStatSelect.value = localStorage.getItem('header-stat-pref') || 'today-expense';
+        headerStatSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            localStorage.setItem('header-stat-pref', val);
+            updateHeaderStats();
+        });
+    }
 
     document.getElementById('logout-btn').addEventListener('click', () => {
         logoutUser();
