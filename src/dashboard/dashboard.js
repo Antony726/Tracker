@@ -1,13 +1,13 @@
-import { getRecentTransactions } from '../transactions/transaction-service.js';
+import { getRecentTransactions, deleteTransaction } from '../transactions/transaction-service.js';
 import { getCurrentUser } from '../auth/auth-service.js';
 import { formatCurrency, formatDate } from '../utils/dom.js';
 import { animateCounter } from '../animations/gsap-setup.js';
+import { openViewTransactionsSheet } from '../transactions/view-transactions.js';
+import { showToast } from '../components/toast.js';
 
 export async function loadDashboardData(container) {
     const user = getCurrentUser();
     if (!user) return;
-    
-    // Skeleton loading state (already rendered by router ideally, but let's re-render dynamic parts)
     
     try {
         const transactions = await getRecentTransactions(user.uid, 50); // get last 50 for balance calc
@@ -40,24 +40,36 @@ export async function loadDashboardData(container) {
 }
 
 function renderDashboardUI(container, balance, income, myExpense, totalExpense, recentTx) {
-    let txHtml = recentTx.length > 0 ? recentTx.map(tx => `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-card); display: flex; align-items: center; justify-content: center;">
-                    <span class="material-symbols-rounded" style="color: ${tx.type === 'income' ? 'var(--income)' : (tx.expenseMode === 'external' ? 'var(--external)' : 'var(--expense)')}">${tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}</span>
+    let txHtml = recentTx.length > 0 ? recentTx.map(tx => {
+        const isIncome = tx.type === 'income';
+        const displayTitle = tx.shopName ? `${tx.category || 'General'} • ${tx.shopName}` : (tx.category || 'General');
+        
+        return `
+            <div class="dashboard-tx-row" data-id="${tx.id}" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; transition: all 0.2s;">
+                <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-card); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <span class="material-symbols-rounded" style="color: ${isIncome ? 'var(--income)' : (tx.expenseMode === 'external' ? 'var(--external)' : 'var(--expense)')}">${isIncome ? 'arrow_downward' : 'arrow_upward'}</span>
+                    </div>
+                    <div style="min-width: 0; flex: 1;">
+                        <h4 style="margin:0; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayTitle}</h4>
+                        <span class="text-muted" style="font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${formatDate(tx.timestamp)} ${tx.expenseMode === 'external' ? '• Shared' : ''}</span>
+                    </div>
                 </div>
-                <div>
-                    <h4 style="margin:0; font-size: 1rem;">${tx.category || 'General'}</h4>
-                    <span class="text-muted" style="font-size: 0.75rem;">${formatDate(tx.timestamp)} ${tx.expenseMode === 'external' ? '• Shared' : ''}</span>
+                <div style="display: flex; align-items: center; gap: 8px; margin-left: 8px; flex-shrink: 0;">
+                    <div style="text-align: right;">
+                        <h4 class="${isIncome ? 'text-income' : (tx.expenseMode === 'external' ? 'text-external' : 'text-expense')}" style="margin:0;">
+                            ${isIncome ? '+' : '-'}${formatCurrency(tx.amount)}
+                        </h4>
+                    </div>
+                    
+                    <!-- Direct Delete button -->
+                    <button class="dash-delete-btn" data-id="${tx.id}" style="background: transparent; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.2s;">
+                        <span class="material-symbols-rounded" style="font-size: 18px;">delete</span>
+                    </button>
                 </div>
             </div>
-            <div style="text-align: right;">
-                <h4 class="${tx.type === 'income' ? 'text-income' : (tx.expenseMode === 'external' ? 'text-external' : 'text-expense')}" style="margin:0;">
-                    ${tx.type === 'income' ? '+' : '-'}${formatCurrency(tx.amount)}
-                </h4>
-            </div>
-        </div>
-    `).join('') : '<p class="text-muted">No recent transactions</p>';
+        `;
+    }).join('') : '<p class="text-muted">No recent transactions</p>';
 
     container.innerHTML = `
         <div class="glass-card" style="margin-bottom: var(--spacing-md); text-align: center;">
@@ -87,15 +99,76 @@ function renderDashboardUI(container, balance, income, myExpense, totalExpense, 
         </div>
 
         <div class="glass-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+            <div id="recent-activity-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); cursor: pointer; user-select: none;">
                 <h3>Recent Activity</h3>
-                <span class="material-symbols-rounded text-muted" style="font-size: 18px;">arrow_forward</span>
+                <span class="material-symbols-rounded text-muted" style="font-size: 18px; transition: transform 0.2s;">arrow_forward</span>
             </div>
             <div>
                 ${txHtml}
             </div>
         </div>
     `;
+
+    // Setup Recent Activity header navigation click
+    const recentActivityHeader = document.getElementById('recent-activity-header');
+    if (recentActivityHeader) {
+        recentActivityHeader.addEventListener('click', () => {
+            openViewTransactionsSheet();
+        });
+        
+        const arrow = recentActivityHeader.querySelector('.material-symbols-rounded');
+        recentActivityHeader.addEventListener('mouseenter', () => {
+            if (arrow) arrow.style.transform = 'translateX(4px)';
+        });
+        recentActivityHeader.addEventListener('mouseleave', () => {
+            if (arrow) arrow.style.transform = 'translateX(0px)';
+        });
+    }
+
+    // Setup direct delete button listeners
+    const deleteBtns = container.querySelectorAll('.dash-delete-btn');
+    deleteBtns.forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+            btn.style.color = 'var(--expense)';
+            btn.style.background = 'rgba(255,82,82,0.1)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.color = 'var(--text-muted)';
+            btn.style.background = 'transparent';
+        });
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const txId = btn.dataset.id;
+            const confirmed = confirm("Are you sure you want to delete this transaction?");
+            if (!confirmed) return;
+
+            const user = getCurrentUser();
+            if (!user) return;
+
+            // Animate row removal if GSAP is loaded
+            const row = container.querySelector(`.dashboard-tx-row[data-id="${txId}"]`);
+            if (row && window.gsap) {
+                gsap.to(row, {
+                    x: -30, opacity: 0, duration: 0.2, onComplete: async () => {
+                        await performDelete(user.uid, txId);
+                    }
+                });
+            } else {
+                await performDelete(user.uid, txId);
+            }
+        });
+    });
+
+    async function performDelete(uid, txId) {
+        try {
+            await deleteTransaction(uid, txId);
+            showToast("Transaction deleted", "success");
+            // Re-load the dashboard to recompute balance and refresh dashboard counters
+            await loadDashboardData(container);
+        } catch (error) {
+            showToast("Failed to delete transaction", "error");
+        }
+    }
 
     // Animate numbers
     setTimeout(() => {
