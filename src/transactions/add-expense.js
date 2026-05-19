@@ -1,5 +1,5 @@
 import { openBottomSheet, closeBottomSheet } from '../components/bottom-sheet.js';
-import { addTransaction } from './transaction-service.js';
+import { addTransaction, getRecentTransactions } from './transaction-service.js';
 import { getUserCategories } from '../categories/category-service.js';
 import { getCurrentUser } from '../auth/auth-service.js';
 import { showToast } from '../components/toast.js';
@@ -38,6 +38,24 @@ export async function openAddExpenseSheet() {
             <span>${p}</span>
         </div>
     `).join('');
+
+    // Fetch and compute frequent shops suggestions from past transactions
+    let frequentShops = [];
+    try {
+        const pastTx = await getRecentTransactions(user.uid, 100);
+        const shopCounts = {};
+        pastTx.forEach(tx => {
+            if (tx.shopName && tx.shopName.trim() !== '') {
+                const normalized = tx.shopName.trim();
+                shopCounts[normalized] = (shopCounts[normalized] || 0) + 1;
+            }
+        });
+        frequentShops = Object.keys(shopCounts)
+            .sort((a, b) => shopCounts[b] - shopCounts[a])
+            .slice(0, 7); // top 7 frequent shops
+    } catch (e) {
+        console.error("Failed to load shop suggestions:", e);
+    }
 
     const html = `
         <h3 class="text-gradient" style="margin-bottom: var(--spacing-md); text-align:center;">Add Transaction</h3>
@@ -85,9 +103,21 @@ export async function openAddExpenseSheet() {
                 </div>
             </div>
             
-            <div class="form-group" style="margin:0;">
-                <label>Shop/Location Name</label>
-                <input type="text" id="tx-shop" placeholder="E.g., Dominos, Amazon" class="glass-input">
+            <!-- Date & Shop flex block -->
+            <div style="display: flex; gap: var(--spacing-sm);">
+                <div class="form-group" style="margin:0; flex:1;">
+                    <label>Date</label>
+                    <input type="date" id="tx-date" required class="glass-input" style="font-size: 0.95rem;">
+                </div>
+                <div class="form-group" style="margin:0; flex:1; position: relative;">
+                    <label>Shop/Location Name</label>
+                    <input type="text" id="tx-shop" placeholder="E.g., Dominos, Amazon" autocomplete="off" class="glass-input" style="font-size: 0.95rem;">
+                    
+                    <!-- Frequently Stored Shop suggestions dropdown -->
+                    <div id="shop-suggestions-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: rgba(25, 25, 30, 0.95); backdrop-filter: var(--glass-blur); border: 1px solid var(--border-light); border-radius: 8px; margin-top: 4px; z-index: 100; max-height: 150px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                        <!-- suggestions injected dynamically -->
+                    </div>
+                </div>
             </div>
 
             <div class="form-group" style="margin:0;">
@@ -104,16 +134,22 @@ export async function openAddExpenseSheet() {
         </form>
     `;
 
-    openBottomSheet(html, setupFormListeners);
+    openBottomSheet(html, () => setupFormListeners(frequentShops));
 }
 
-function setupFormListeners() {
+function setupFormListeners(frequentShops = []) {
     let currentType = 'expense';
     let currentMode = 'personal';
 
     const typeBtns = document.querySelectorAll('.tx-type-btn');
     const modeBtns = document.querySelectorAll('.tx-mode-btn');
     const modeContainer = document.getElementById('expense-mode-container');
+
+    // Default the date field to today's date
+    const dateInput = document.getElementById('tx-date');
+    if (dateInput) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
 
     // Category Select Logic
     const catTrigger = document.getElementById('cat-select-trigger');
@@ -170,6 +206,51 @@ function setupFormListeners() {
         opt.addEventListener('mouseleave', () => opt.style.background = 'transparent');
     });
 
+    // Frequently Typed/Stored Shop suggestions Logic
+    const shopInput = document.getElementById('tx-shop');
+    const shopDropdown = document.getElementById('shop-suggestions-dropdown');
+
+    function renderShopSuggestions(filteredShops) {
+        if (!filteredShops || filteredShops.length === 0) {
+            shopDropdown.style.display = 'none';
+            return;
+        }
+        shopDropdown.innerHTML = filteredShops.map(shop => `
+            <div class="custom-shop-opt" data-value="${shop}" style="padding: 10px 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem;">
+                <span>${shop}</span>
+            </div>
+        `).join('');
+        shopDropdown.style.display = 'block';
+
+        const optDivs = shopDropdown.querySelectorAll('.custom-shop-opt');
+        optDivs.forEach(div => {
+            div.addEventListener('click', () => {
+                shopInput.value = div.dataset.value;
+                shopDropdown.style.display = 'none';
+            });
+            div.addEventListener('mouseenter', () => div.style.background = 'rgba(255,255,255,0.1)');
+            div.addEventListener('mouseleave', () => div.style.background = 'transparent');
+        });
+    }
+
+    if (shopInput && shopDropdown) {
+        shopInput.addEventListener('focus', () => {
+            const val = shopInput.value.trim().toLowerCase();
+            const filtered = val === '' 
+                ? frequentShops 
+                : frequentShops.filter(s => s.toLowerCase().includes(val));
+            renderShopSuggestions(filtered);
+        });
+
+        shopInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim().toLowerCase();
+            const filtered = val === '' 
+                ? frequentShops 
+                : frequentShops.filter(s => s.toLowerCase().includes(val));
+            renderShopSuggestions(filtered);
+        });
+    }
+
     // Close dropdowns if clicked outside
     document.addEventListener('click', (e) => {
         if (!catTrigger.contains(e.target) && !catDropdown.contains(e.target)) {
@@ -177,6 +258,9 @@ function setupFormListeners() {
         }
         if (!payTrigger.contains(e.target) && !payDropdown.contains(e.target)) {
             payDropdown.style.display = 'none';
+        }
+        if (shopInput && shopDropdown && !shopInput.contains(e.target) && !shopDropdown.contains(e.target)) {
+            shopDropdown.style.display = 'none';
         }
     });
 
@@ -254,6 +338,15 @@ function setupFormListeners() {
         const shopName = document.getElementById('tx-shop').value;
         const recurring = document.getElementById('tx-recurring').checked;
 
+        // Parse selected date and translate to local timestamp
+        const selectedDateStr = document.getElementById('tx-date').value;
+        let finalTimestamp = Date.now();
+        if (selectedDateStr) {
+            const parts = selectedDateStr.split('-');
+            const localDate = new Date(parts[0], parts[1] - 1, parts[2]);
+            finalTimestamp = localDate.getTime();
+        }
+
         const txData = {
             type: currentType,
             expenseMode: currentType === 'expense' ? currentMode : 'personal',
@@ -263,7 +356,7 @@ function setupFormListeners() {
             paymentMethod,
             shopName,
             recurring,
-            timestamp: Date.now()
+            timestamp: finalTimestamp
         };
 
         try {
